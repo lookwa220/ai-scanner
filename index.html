@@ -14,7 +14,7 @@
 <header><h1>ตรวจก่อนส่ง</h1><span class="badge">ชุดทดลองออฟฟิศ</span></header>
 <p class="intro">เทียบรายการส่ง นามบัตร และชิ้นงานในรอบเดียว</p>
 <div id="connection" class="status" role="status">กำลังเชื่อมต่อรายการส่ง…</div>
-<p class="note">รุ่น 2 · กล้องบน GitHub Pages <a href="https://script.google.com/a/macros/minamida.co.th/s/AKfycbyMxcd_L-gzz6ALxJHKvAhAA_yo2ssP-ip3-gVBxpVrRQrI3slcBxJlC8UpUbGsAXbh/exec" target="_blank" rel="noopener">เปิด Apps Script เพื่อตรวจการเข้าสู่ระบบ</a></p>
+<p class="note">รุ่น 2 · กล้องบน GitHub Pages <a href="https://script.google.com/a/macros/minamida.co.th/s/AKfycbzp94TausDK0k4IzuUs438gRsj0KEvcGQ34z6Od7xvPOW8QKA1UPyqIBaEhHkbrL2p09w/exec" target="_blank" rel="noopener">เปิด Apps Script เพื่อตรวจการเข้าสู่ระบบ</a></p>
 <section class="panel"><div class="stage">01 · รายการที่ต้องส่ง</div><h2>เลือกรายการทดลอง</h2>
 <label for="order">รายการจาก Google Sheets</label><select id="order" disabled><option value="">รอโหลดรายการ</option></select>
 <p id="expected" class="note">Nattawat = ยางลบ · Pattarin = ปากกา</p>
@@ -64,7 +64,7 @@ if (typeof module !== 'undefined') module.exports = Inspection;
 const $ = id => document.getElementById(id);
 const localOrders=[{id:'DEMO-001',expected:'Nattawat',item:'ยางลบ',pallet:'PALLET-001'},{id:'DEMO-002',expected:'Pattarin',item:'ปากกา',pallet:'PALLET-002'}];
 // No no-cors requests: a save is successful only after Apps Script acknowledges it.
-const APP_SCRIPT_URL='https://script.google.com/a/macros/minamida.co.th/s/AKfycbyMxcd_L-gzz6ALxJHKvAhAA_yo2ssP-ip3-gVBxpVrRQrI3slcBxJlC8UpUbGsAXbh/exec';
+const APP_SCRIPT_URL='https://script.google.com/a/macros/minamida.co.th/s/AKfycbzp94TausDK0k4IzuUs438gRsj0KEvcGQ34z6Od7xvPOW8QKA1UPyqIBaEhHkbrL2p09w/exec';
 const server=true;
 let bridgeFrame,bridgeSource,bridgeOrigin,bridgeChannel,bridgeReady,bridgeTimer;
 const requests=new Map();
@@ -103,6 +103,7 @@ async function rpc(method,payload){
     bridgeSource.postMessage({app:'inspection-bridge-v2',channel:bridgeChannel,id,method,payload},bridgeOrigin);
   });
 }
+
 
 let orders=[], modelURL='https://teachablemachine.withgoogle.com/models/Yqrn3xqUj/', model, worker, stream, modelTask, workerTask;
 let busy=false, evidence={}, pending=null, started=0, finished=0, generation=0, configReady=false;
@@ -150,4 +151,5 @@ $('itemFile').onchange=()=>{const f=$('itemFile').files[0];if(f)task(async()=>{c
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});window.addEventListener('pagehide',stop);
 window.addEventListener('load',()=>task(config));
 </script></body></html>
+
 
