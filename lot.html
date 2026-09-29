@@ -1,0 +1,148 @@
+<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ตรวจพาเลทอัตโนมัติ</title>
+<script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script><script defer src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.5/dist/teachablemachine-image.min.js"></script><script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<style>body{font:17px/1.6 Tahoma,sans-serif;background:#f1f5f2;color:#193c37;margin:0}main{max-width:760px;padding:20px;margin:auto}h1{font-size:26px}h2{font-size:22px}button,a{font:inherit}button{padding:14px;border:0;border-radius:12px;background:#175b4c;color:white;cursor:pointer;margin:5px}button:disabled{opacity:.45}article,.box{background:white;border:1px solid #d3dfd7;border-radius:16px;padding:18px;margin:12px 0}.note{font-size:14px;color:#526d61}.status{padding:16px;border-radius:12px;background:#dcebe2;white-space:pre-line}.status[data-kind=FAIL]{background:#ffe0db;color:#8d271b}.status[data-kind=UNKNOWN]{background:#fff0ce}.status[data-kind=PASS]{background:#d2f3da;color:#145d31}video{width:100%;max-height:440px;background:#142b28;border-radius:14px}img{max-width:45%;max-height:130px}a{color:#175b4c}[hidden]{display:none!important}.secondary{background:#e0e9e3;color:#193c37}body.scanning{overflow:hidden;overscroll-behavior:none}#scan{position:fixed;inset:0;z-index:50;height:100dvh;background:#101b19;color:white;overflow:hidden;overscroll-behavior:none}#camera{position:absolute;inset:0;width:100%;height:100%;max-height:none;border-radius:0;object-fit:contain} .camera-top,.camera-bottom{position:absolute;left:0;right:0;z-index:2;padding:12px 16px;background:linear-gradient(#102721ee,#102721b8);box-sizing:border-box}.camera-top{top:0;padding-top:max(12px,env(safe-area-inset-top))}.camera-bottom{bottom:0;padding-bottom:max(12px,env(safe-area-inset-bottom))}#heading{font-size:21px;margin:0}#chosen{font-size:13px;margin:2px 0}#message{font-size:16px;margin:7px 0;padding:9px 12px;color:#143c30;max-height:25dvh;overflow:auto}#timing{color:#d8e8df;font-size:12px;margin:3px 0}#liveScore{font-size:14px;font-variant-numeric:tabular-nums;white-space:pre-line;margin:4px 0}#scan button{font-size:14px;padding:10px;margin:3px}#evidence{display:none}#aim{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:2px solid #78e1c0;box-sizing:border-box;pointer-events:none}#aim span{position:absolute;top:8px;left:8px;background:#102721cc;padding:3px 7px;font-size:12px}#scoreNote{font-size:11px;color:#c5d8ce;margin:2px 0}@media(max-height:500px){.camera-top{padding:6px 12px}.camera-bottom{padding:6px 12px}#heading{font-size:17px}#message{font-size:13px;padding:5px;margin:3px 0}#liveScore{font-size:12px}#scan button{padding:6px;font-size:12px}}#orders{background:white;border:1px solid #d3dfd7;border-radius:12px;overflow:hidden}#orders article{display:grid;grid-template-columns:1fr auto;gap:2px 10px;border:0;border-bottom:1px solid #d3dfd7;border-radius:0;margin:0;padding:10px 12px}#orders article:last-child{border-bottom:0}#orders article strong{font-size:16px}#orders article p{grid-column:1;font-size:12px;margin:0;color:#526d61}#orders article button{grid-column:2;grid-row:1/3;align-self:center;font-size:13px;padding:9px;margin:0}#list .box{padding:12px;margin:10px 0}#list .box p{margin:4px 0}#list .box button{padding:8px;font-size:14px}body.scanning{position:fixed;width:100%;height:100%}</style>
+<main><h1>ตรวจก่อนส่ง · อัตโนมัติ</h1><p class="note">รุ่น 4 · ป้ายรหัสและล็อต · 1 รายการต่อ 1 พาเลท · ชุดทดลองยางลบ / ปากกา</p><p id="connection" class="status" role="status">กำลังโหลดแผนวันนี้…</p>
+<section id="list"><div class="box"><strong id="today"></strong><p>เลือกพาเลทที่จะไปหยิบ</p><button id="refresh">โหลดรายการใหม่</button><p class="note">ผู้วางแผนแก้รายการที่แท็บ Daily_Code_Plan ใน <a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/1axog8cEOVRt_GAZCrZcSz3PGSTguZp_wvE-fJnKGRDg/edit">Google Sheets</a></p></div><div class="status" id="queueStatus" role="status"></div><button id="sync" class="secondary">ส่งรายการค้างอีกครั้ง</button><div id="orders"></div></section>
+<section id="scan" hidden><video id="camera" muted autoplay playsinline></video><div id="aim" hidden><span>วางชิ้นงานในกรอบนี้</span></div><div class="camera-top"><h2 id="heading"></h2><p id="chosen"></p></div><div class="camera-bottom"><p id="liveScore">รอภาพจากกล้อง</p><p id="scoreNote">คะแนนจากโมเดล ไม่ใช่การรับรองความถูกต้อง</p><p id="message" class="status" role="status" aria-live="polite"></p><p id="timing"></p><div id="evidence"></div><button id="begin">เปิดกล้องและเริ่มตรวจ</button><button id="retry" hidden>ตรวจใหม่ตั้งแต่ Label</button><button id="retrySave" hidden>ลองบันทึกอีกครั้ง</button><button id="back" class="secondary">กลับรายการ</button></div></section>
+<p class="note"><a target="_blank" rel="noopener" href="https://script.google.com/a/macros/minamida.co.th/s/AKfycbzp94TausDK0k4IzuUs438gRsj0KEvcGQ34z6Od7xvPOW8QKA1UPyqIBaEhHkbrL2p09w/exec">เปิดการเชื่อมต่อ Google หากโหลดรายการไม่ได้</a> · ผลจากภาพด้านบนไม่ยืนยันจำนวนหรือชิ้นงานที่ถูกบัง</p></main>
+<script>
+/* Shared decision rules for browser and Apps Script. Demo thresholds, not calibrated accuracy. */
+var Inspection = (function () {
+  const names = ['Nattawat', 'Pattarin'];
+  function card(text) {
+    const words = String(text || '').toLowerCase().match(/[a-z]+/g) || [];
+    // Keep the published model / sheet key Nattawat; the business card says Nattawut.
+    const hits = names.filter(n => words.includes(n.toLowerCase()) || (n === 'Nattawat' && words.includes('nattawut')));
+    return hits.length === 1 ? hits[0] : '';
+  }
+  function decide(expected, e) {
+    const label = card(e.cardText);
+    if (!names.includes(expected)) return {status:'UNKNOWN', reason:'รายการส่งไม่ถูกต้อง'};
+    if (!label) return {status:'UNKNOWN', reason:'อ่านชื่อบนป้ายไม่ได้ หรือพบทั้งสองชื่อ'};
+    if (!Number.isFinite(e.ocrConfidence) || e.ocrConfidence < 60) return {status:'UNKNOWN', reason:'ข้อความบนป้ายยังไม่ชัด'};
+    if (!names.includes(e.detected) || !Number.isFinite(e.confidence) || e.confidence < 0.95 || e.confidence > 1 || !Number.isFinite(e.margin) || e.margin < 0.2 || e.margin > 1) return {status:'UNKNOWN', reason:'ยังจำแนกชิ้นงานไม่ได้ชัดเจน'};
+    if (e.source === 'live' && (!Number.isInteger(e.frames) || e.frames < 5)) return {status:'UNKNOWN', reason:'ผลจากกล้องยังไม่นิ่ง'};
+    if (!['live','photo'].includes(e.source)) return {status:'UNKNOWN', reason:'ไม่มีภาพชิ้นงาน'};
+    if (label !== expected || e.detected !== expected) return {status:'FAIL', reason:'รายการส่ง ป้าย และชิ้นงานไม่ตรงกัน'};
+    return {status:'PASS', reason:'รายการส่ง ป้าย และชิ้นงานตรงกัน'};
+  }
+  return {names, card, decide};
+})();
+if (typeof module !== 'undefined') module.exports = Inspection;
+
+var LotRules=(function(){
+ const parts={'017-011':{expected:'Nattawat',item:'ยางลบ',partNo:'19522-6A0-A010-01T-1'},'003-008':{expected:'Pattarin',item:'ปากกา',partNo:'90105-T0428'}};
+ function parse(text){
+  const source=String(text||'').toUpperCase().replace(/[–—−]/g,'-');
+  const matches=[...source.matchAll(/(?:^|[^0-9A-Z])(\d{3})\s*-\s*(\d{3})\s*-\s*(P\s*\d{6}(?:\s*\/\s*\d{1,3})?\s*-\s*\d{3})(?![0-9A-Z/\-])/g)].map(m=>({code:m[1]+'-'+m[2],lot:m[3].replace(/\s/g,'')}));
+  const unique=[...new Map(matches.map(m=>[m.code+'|'+m.lot,m])).values()];
+  if(unique.length!==1)return null;
+  const p=unique[0];return {...p,full:p.code+'-'+p.lot,expected:parts[p.code]?.expected||'',partNo:parts[p.code]?.partNo||''};
+ }
+ return {parts,parse};
+})();
+if(typeof module!=='undefined')module.exports=LotRules;
+
+function createSaveQueue(storage,send,changed){
+ const key='inspection-code-events-v4';let running=false;
+ const read=()=>{const raw=storage.getItem(key);const rows=raw?JSON.parse(raw):[];if(!Array.isArray(rows))throw new Error('คิวบันทึกเสียหาย กรุณาตรวจสอบก่อนเริ่ม');return rows;};
+ function update(id,patch){const rows=read(),i=rows.findIndex(x=>x.id===id);if(i<0)return;rows[i]={...rows[i],...patch};storage.setItem(key,JSON.stringify(rows));changed();}
+ function enqueue(p){const rows=read();if(!rows.some(x=>x.id===p.eventId)){rows.push({id:p.eventId,payload:p,state:'queued',error:''});storage.setItem(key,JSON.stringify(rows));}changed();void drain();}
+ async function drain(){if(running)return;running=true;try{for(;;){const rows=read(),event=rows.find(x=>x.state==='queued');if(!event)break;
+  if(event.payload.stage==='ITEM'){const parent=rows.find(x=>x.id===event.payload.labelEventId);if(!parent||parent.state==='rejected'||parent.response&&parent.response.status!=='LABEL_OK'){update(event.id,{state:'rejected',error:'ต้องตรวจ Label ใหม่'});continue;}if(parent.state!=='done')break;}
+  try{const response=await send(event.payload);if(!response.saved){update(event.id,{state:'rejected',response,error:response.reason||'กรุณาตรวจใหม่'});continue;}update(event.id,{state:'done',response,error:''});}
+  catch(e){update(event.id,{error:String(e.message||e)});break;}
+ }}finally{running=false;}}
+ return {enqueue,drain,read};
+}
+if(typeof module!=='undefined')module.exports=createSaveQueue;
+
+// No no-cors requests: a save is successful only after Apps Script acknowledges it.
+const APP_SCRIPT_URL='https://script.google.com/a/macros/minamida.co.th/s/AKfycbzp94TausDK0k4IzuUs438gRsj0KEvcGQ34z6Od7xvPOW8QKA1UPyqIBaEhHkbrL2p09w/exec';
+const server=true;
+let bridgeFrame,bridgeSource,bridgeOrigin,bridgeChannel,bridgeReady,bridgeTimer;
+const requests=new Map();
+function connectBridge(){
+  if(bridgeReady)return bridgeReady;
+  bridgeChannel=crypto.randomUUID();
+  bridgeReady=new Promise((resolve,reject)=>{
+    const listener=e=>{
+      const d=e.data;
+      if(!d||d.app!=='inspection-bridge-v2'||d.channel!==bridgeChannel) return;
+      if(!/^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(e.origin)) return;
+      if(d.ready){
+        if(bridgeSource)return;
+        bridgeSource=e.source;bridgeOrigin=e.origin;clearTimeout(bridgeTimer);resolve();return;
+      }
+      if(e.source!==bridgeSource||e.origin!==bridgeOrigin)return;
+      const r=requests.get(d.id);if(!r)return;
+      requests.delete(d.id);clearTimeout(r.timer);
+      if(d.ok)r.resolve(d.value);else r.reject(new Error(d.error||'Apps Script ไม่ตอบรับ'));
+    };
+    window.addEventListener('message',listener);
+    bridgeTimer=setTimeout(()=>{window.removeEventListener('message',listener);bridgeFrame.remove();bridgeReady=null;reject(new Error('เชื่อมต่อ Apps Script ไม่สำเร็จ ตรวจว่า Deploy Code.gs และ Bridge.html รุ่นใหม่แล้ว หากต้องเข้าสู่ระบบ ให้เปิดลิงก์ Apps Script ในแท็บใหม่ก่อน แล้วกลับมากดโหลดรายการใหม่'));},25000);
+    bridgeFrame=document.createElement('iframe');
+    bridgeFrame.title='ตัวเชื่อม Google Sheets';bridgeFrame.hidden=true;
+    const url=new URL(APP_SCRIPT_URL);url.searchParams.set('bridge','1');url.searchParams.set('origin',location.origin);url.searchParams.set('channel',bridgeChannel);
+    bridgeFrame.src=url.href;document.body.appendChild(bridgeFrame);
+  });
+  return bridgeReady;
+}
+async function rpc(method,payload){
+  await connectBridge();
+  return new Promise((resolve,reject)=>{
+    const id=crypto.randomUUID();
+    const timer=setTimeout(()=>{requests.delete(id);reject(new Error('ยังไม่ได้รับคำยืนยันจากชีต ลองอีกครั้งได้โดยไม่บันทึกซ้ำ'));},30000);
+    requests.set(id,{resolve,reject,timer});
+    bridgeSource.postMessage({app:'inspection-bridge-v2',channel:bridgeChannel,id,method,payload},bridgeOrigin);
+  });
+}
+
+
+const $=id=>document.getElementById(id),display=n=>n==='Nattawat'?'Nattawut':n;
+let labelPayload=null;let config,order,stream,worker,model,stage='LIST',epoch=0,pending=null,labelEventId='',labelConfidence=0,active=false;
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+function tell(s,kind=''){ $('message').textContent=s;$('message').dataset.kind=kind;}
+function stop(){active=false;epoch++;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('camera').srcObject=null;}
+function stamp(){return {eventId:crypto.randomUUID(),expectedCode:order.code,date:order.date,orderId:order.id,pallet:order.pallet,expected:order.expected,modelURL:config.modelURL};}
+function canonicalClass(name){return name==='Nattawut'?'Nattawat':name;}
+function classText(name){return name==='Nattawat'?'ยางลบ':name==='Pattarin'?'ปากกา':name==='Empty_Box_or_Background'?'พื้นหลัง':'ไม่รู้จัก: '+name;}
+function labelTracker(){let last='',count=0,minimum=100,misses=0,lastGood=0;return {read(name,confidence,now){if(name&&confidence>=60){if(name!==last||now-lastGood>6000){count=0;minimum=100;}last=name;count++;minimum=Math.min(minimum,confidence);misses=0;lastGood=now;}else{misses++;if(misses>1||now-lastGood>6000){last='';count=0;minimum=100;}}return {name:last,count,minimum};}};}
+const saveQueue=createSaveQueue(localStorage,p=>rpc('saveCodeEvent',p),()=>renderQueue());
+function renderQueue(){const rows=saveQueue.read(),waiting=rows.filter(x=>x.state==='queued'),bad=rows.filter(x=>x.state==='rejected');$('queueStatus').textContent=waiting.length?'รอบันทึก '+waiting.length+' ขั้นตอน · เก็บคิวในเครื่องแล้ว อย่าล้างข้อมูลเว็บ':bad.length?'มี '+bad.length+' ขั้นตอนที่ต้องตรวจใหม่: '+bad[bad.length-1].error:'ไม่มีรายการค้างบันทึก';if(stage==='LIST'&&config)renderOrders();}
+function localStatus(o){const rows=saveQueue.read().filter(x=>x.payload.date===o.date&&x.payload.orderId===o.id&&x.payload.pallet===o.pallet);if(rows.some(x=>x.state==='queued'))return 'SENDING';if(rows.some(x=>x.state==='done'&&x.payload.stage==='ITEM'&&['PASS','ALREADY_DONE'].includes(x.response.status)))return 'PASS';if(rows.some(x=>x.state==='rejected'))return 'ISSUE';const last=rows.filter(x=>x.state==='done').at(-1);if(last)return last.response.status==='LABEL_OK'?'IN_PROGRESS':'ISSUE';return o.status;}
+function renderOrders(){$('orders').replaceChildren();for(const o of config.orders){const status=localStatus(o),a=document.createElement('article'),title=document.createElement('strong'),p=document.createElement('p'),b=document.createElement('button');title.textContent=o.code+' · '+o.item;p.textContent=o.pallet+' · '+({PENDING:'รอตรวจ',IN_PROGRESS:'ตรวจ Label แล้ว',PASS:'ผ่านและบันทึกแล้ว',ISSUE:'พบปัญหา / ตรวจใหม่ได้',SENDING:'รอบันทึก'})[status];b.textContent=status==='PASS'?'ผ่านแล้ว':status==='SENDING'?'รอบันทึก':'เลือก';b.disabled=['PASS','SENDING'].includes(status);b.onclick=()=>{choose(o);begin();};a.append(title,p,b);$('orders').append(a);}if(!config.orders.length)$('orders').textContent='ไม่มีแผนวันนี้';}
+function alarm(){if(navigator.vibrate)navigator.vibrate([150,100,150]);}
+async function load(){$('refresh').disabled=true;try{config=await rpc('getCodeConfig');$('connection').textContent='เชื่อมต่อ Google Sheets แล้ว';$('today').textContent='แผนวันที่ '+config.date;renderOrders();renderQueue();}catch(e){$('connection').textContent='โหลดไม่ได้: '+e.message;}finally{$('refresh').disabled=false;}}
+function choose(o){document.body.classList.add('scanning');$('liveScore').textContent='รอภาพจากกล้อง';$('aim').hidden=true;order=o;pending=null;labelPayload=null;labelEventId='';$('list').hidden=true;$('scan').hidden=false;$('chosen').textContent=o.code+' · '+o.item+' · '+o.pallet;$('heading').textContent='กรุณาส่อง Label';$('evidence').replaceChildren();$('begin').hidden=false;$('retry').hidden=true;$('retrySave').hidden=true;tell('ส่องบรรทัด '+o.code+'-P… ให้เป็นแนวนอน' );stage='READY';}
+function canvas(square=false){const v=$('camera'),w=v.videoWidth,h=v.videoHeight;if(!w||!h)throw new Error('ภาพกล้องยังไม่พร้อม');const sw=square?Math.min(w,h):w,sh=square?Math.min(w,h):h,scale=Math.min(1,(square?640:1600)/Math.max(sw,sh)),c=document.createElement('canvas');c.width=Math.round(sw*scale);c.height=Math.round(sh*scale);c.getContext('2d').drawImage(v,(w-sw)/2,(h-sh)/2,sw,sh,0,0,c.width,c.height);return c;}
+function proof(c,alt){const im=new Image();im.src=c.toDataURL('image/jpeg',.7);im.alt=alt;$('evidence').append(im);}
+async function begin(){if(active||pending)return;$('begin').disabled=true;$('retry').hidden=true;const token=++epoch;try{tell('กำลังเปิดกล้องและเตรียมตัวตรวจ…');stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});if(token!==epoch){stream.getTracks().forEach(t=>t.stop());return;}$('camera').srcObject=stream;await $('camera').play();if(!worker)worker=await Tesseract.createWorker('eng',1);if(!model){const candidate=await tmImage.load(config.modelURL+'model.json',config.modelURL+'metadata.json');const labels=candidate.getClassLabels().map(canonicalClass);if(labels.length!==3||!['Nattawat','Pattarin','Empty_Box_or_Background'].every(x=>labels.includes(x)))throw new Error('ชื่อคลาสไม่ตรง: '+candidate.getClassLabels().join(', '));model=candidate;}if(token!==epoch)return;active=true;$('begin').hidden=true;$('evidence').replaceChildren();labelEventId='';await loopLabel(token);}catch(e){if(token===epoch){stop();tell('เริ่มไม่ได้: '+e.message,'UNKNOWN');$('begin').hidden=false;}}finally{$('begin').disabled=false;}}
+async function loopLabel(token){stage='LABEL';$('aim').hidden=false;placeAim();$('liveScore').textContent='กำลังอ่านข้อความ…';$('heading').textContent='กรุณาส่อง Label';const tracker=labelTracker();const start=performance.now();
+ while(active&&token===epoch){const roundStart=performance.now();const c=labelCanvas(),r=await worker.recognize(c);if(token!==epoch)return;const parsed=LotRules.parse(r.data.text),name=parsed?parsed.full:'',ok=!!parsed&&r.data.confidence>=60;const {count,minimum}=tracker.read(name,r.data.confidence,performance.now());
+  $('liveScore').textContent='รหัส/ล็อต: '+(name||'ยังอ่านไม่ได้')+' · คะแนน OCR '+Math.round(r.data.confidence)+'% · ยืนยัน '+count+'/3';$('timing').textContent='ตรวจ Label '+Math.floor((performance.now()-start)/1000)+' วินาที';tell(ok?'อ่านได้ '+name+' · ยืนยัน '+count+'/3':(count?'ภาพยังไม่ชัด · เก็บผลก่อนหน้าไว้ชั่วคราว':'กำลังอ่าน Label กรุณาถือกล้องให้นิ่ง'));
+  if(count>=3){proof(c,'Label รอบนี้');const payload={...stamp(),stage:'LABEL',labelText:name,ocrConfidence:minimum,frames:count};saveQueue.enqueue(payload);if(parsed.code!==order.code){stop();tell('รหัส '+parsed.code+' ไม่ตรงกับ '+order.code+' · กำลังบันทึกเหตุการณ์','FAIL');$('retry').hidden=false;return;}labelPayload=payload;labelEventId=payload.eventId;labelConfidence=minimum;$('heading').textContent='กรุณาส่องชิ้นงาน';tell('รหัสตรงแล้ว · นำป้ายออกและส่องชิ้นงาน\nกำลังบันทึก Label เบื้องหลัง');await loopItem(token);return;}
+  if(performance.now()-start>=30000){saveQueue.enqueue({...stamp(),stage:'LABEL',labelText:'',ocrConfidence:0,frames:0});stop();tell('อ่านรหัสและล็อตไม่ได้ กรุณาส่องเฉพาะบรรทัด Lot No. แนวนอน','UNKNOWN');$('retry').hidden=false;return;}await delay(Math.max(100,400-(performance.now()-roundStart)));
+ }
+}
+function labelRect(){const v=$('camera'),w=v.videoWidth*.9,h=Math.min(w*.25,v.videoHeight*.35);return {w,h};}
+function labelCanvas(){const v=$('camera'),{w,h}=labelRect(),c=document.createElement('canvas');c.width=Math.round(w);c.height=Math.round(h);c.getContext('2d').drawImage(v,(v.videoWidth-w)/2,(v.videoHeight-h)/2,w,h,0,0,c.width,c.height);return c;}
+function placeAim(){const v=$('camera');if(!v.videoWidth||!v.videoHeight)return;const scale=Math.min(v.clientWidth/v.videoWidth,v.clientHeight/v.videoHeight),size=Math.min(v.videoWidth,v.videoHeight),r=stage==='LABEL'?labelRect():{w:size,h:size};$('aim').style.width=r.w*scale+'px';$('aim').style.height=r.h*scale+'px';$('aim').querySelector('span').textContent=stage==='LABEL'?'วางเฉพาะรหัส xxx-xxx-P… ในกรอบ':'วางชิ้นงานในกรอบนี้';}
+window.addEventListener('resize',placeAim);$('camera').addEventListener('loadedmetadata',placeAim);
+async function loopItem(token){stage='ITEM';$('aim').hidden=false;placeAim();$('heading').textContent='กรุณาส่องชิ้นงาน';let last='',count=0,min=1,margin=1;const start=performance.now();
+ while(active&&token===epoch){const c=canvas(true),p=(await model.predict(c,false)).map(x=>({...x,className:canonicalClass(x.className)})).sort((a,b)=>b.probability-a.probability);if(token!==epoch)return;const name=p[0].className,confidence=p[0].probability,gap=confidence-(p[1]?.probability||0),ok=Inspection.names.includes(name)&&confidence>=.95&&gap>=.2;if(ok){min=name===last?Math.min(min,confidence):confidence;margin=name===last?Math.min(margin,gap):gap;count=name===last?count+1:1;last=name;}else{count=0;last='';}
+  $('liveScore').textContent=p.map(x=>classText(x.className)+' '+(x.probability*100).toFixed(1)+'%').join(' · ');$('timing').textContent='ต้องได้ ≥95% ต่อเนื่อง 5 รอบ · ตอนนี้ '+count+'/5 · ตรวจชิ้นงาน '+Math.floor((performance.now()-start)/1000)+' วินาที';tell(ok?'พบ '+(name==='Nattawat'?'ยางลบ':'ปากกา')+' · ยืนยัน '+count+'/5':'นำ Label ออก แล้วส่องเฉพาะชิ้นงานให้ชัด');
+  if(count>=5||performance.now()-start>=30000){proof(c,'ชิ้นงานรอบนี้');pending={...stamp(),stage:'ITEM',labelEventId,labelText:labelPayload.labelText,cardText:order.expected,ocrConfidence:labelConfidence,source:'live',frames:count>=5?count:0,detected:name,confidence:count>=5?min:confidence,margin:count>=5?margin:gap};await persist(token);return;}await delay(400);
+ }
+}
+async function persist(token){const p=pending;saveQueue.enqueue(p);pending=null;const pass=p.frames>=5&&p.detected===order.expected;stop();stage='DONE';tell(pass?'ตรวจตรงแล้ว · รอยืนยันการบันทึก':'ตรวจไม่ผ่าน · กำลังบันทึกเหตุการณ์',pass?'':'UNKNOWN');alarm();await delay(600);await back();}
+async function back(){if(pending)return;stop();stage='LIST';document.body.classList.remove('scanning');$('scan').hidden=true;$('list').hidden=false;await load();}
+$('refresh').onclick=load;$('begin').onclick=begin;$('retry').onclick=()=>{choose(order);begin();};$('back').onclick=back;
+$('retrySave').onclick=()=>{if(stage==='SAVE_ERROR'&&pending){active=!!stream;persist(epoch);}};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&active){if(stage==='SAVING'){active=false;return;}stop();stage='PAUSED';tell('พักการตรวจเมื่อออกจากหน้า กรุณาเริ่มตรวจ Label ใหม่');$('retry').hidden=false;}});window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());});
+$('sync').onclick=()=>saveQueue.drain();window.addEventListener('online',()=>saveQueue.drain());window.addEventListener('storage',()=>renderQueue());setInterval(()=>{void saveQueue.drain();},15000);window.addEventListener('load',()=>{load();void saveQueue.drain();});
+</script></html>
+
+
+
+
